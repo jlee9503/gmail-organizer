@@ -8,6 +8,10 @@ token files/
 # C extensions
 *.so
 
+# Reference
+schedule_email.py
+search_gmail.py
+
 # Distribution / packaging
 .Python
 build/

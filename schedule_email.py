@@ -1,16 +1,36 @@
-import schedule
+import threading
 import time
 
-def sendScheduled_email():
-    print("I am a scheduled job")
-    return schedule.CancelJob
-    
-schedule.every(5).seconds.do(sendScheduled_email)
-#schedule.every().day.at('22:30').do(sendScheduled_email)
-# schedule.every().monday.do(job)
-# schedule.every().wednesday.at("13:15").do(job)
+import schedule
 
 
-while True:
-    schedule.run_pending()
-    time.sleep(1)
+def run_continuously(interval=1):
+    cease_continuous_run = threading.Event()
+
+    class ScheduleThread(threading.Thread):
+        @classmethod
+        def run(cls):
+            while not cease_continuous_run.is_set():
+                schedule.run_pending()
+                time.sleep(interval)
+
+    continuous_thread = ScheduleThread()
+    continuous_thread.start()
+    return cease_continuous_run
+
+
+def background_job():
+    print('Hello from the background thread')
+
+
+schedule.every().second.do(background_job)
+
+# Start the background thread
+stop_run_continuously = run_continuously()
+
+# Do some other things...
+time.sleep(1)
+print("do other things")
+
+# Stop the background thread
+stop_run_continuously.set()

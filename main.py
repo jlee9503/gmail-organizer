@@ -1,12 +1,13 @@
 import os
 import tkinter as tk
 import customtkinter as ctk
+import schedule
+import time
 from tkinter import ttk
 from tkcalendar import Calendar
 from datetime import datetime
-
 from create_emailDraft import gmail_send_message
-
+from search_gmail import search_emails
 
 class App(ctk.CTk):
     def __init__(self):
@@ -27,6 +28,10 @@ class App(ctk.CTk):
         self.grid_columnconfigure((0, 3), weight=0)
         self.grid_columnconfigure((1, 2), weight=1)
         self.grid_rowconfigure((0, 1, 2, 3, 4, 5), weight=1)
+
+        ### global variables ###
+        self.selected_time = None
+        self.sent_email = None
 
         ### left sidebar ###
         self.sidebar_frame = ctk.CTkFrame(self, width=140, corner_radius=0)
@@ -115,7 +120,7 @@ class App(ctk.CTk):
             self.send_page.grid(row=0, column=1, rowspan=5, columnspan=2, padx=10, sticky="nsew")
 
             self.send_page_from_lbl = ctk.CTkLabel(self.send_page, text="From", width=50, anchor="w").grid(row=0, column=1)
-            self.input_from = ctk.CTkEntry(self.send_page, placeholder_text="Your email", width=620)
+            self.input_from = ctk.CTkEntry(self.send_page, placeholder_text="Your name", width=620)
             self.input_from.grid(row=0, column=2, padx=(30,0), pady=10)
 
             self.send_page_to_lbl = ctk.CTkLabel(self.send_page, text="To", width=50, anchor='w').grid(row=1, column=1)
@@ -127,42 +132,49 @@ class App(ctk.CTk):
             self.send_page_msg_txt.grid(row=3, column=1, columnspan=2, sticky='w', padx=(15,0))
 
             self.send_page_btn = ctk.CTkButton(self.send_page, text="Send", width=80, command=self.getInputValues)
-            self.send_page_btn.grid(row=4, column=2, sticky='E', pady=(20,0))
+            self.send_page_btn.grid(row=4, column=1, sticky='W', padx=(15,0), pady=(20,0))
         else:
-            self.send_page.destroy()
+            self.send_page.grid_forget()
 
     def open_schedule_sendPage(self, showPage: bool) -> None:
         if showPage:
             self.schedule_send_page = ctk.CTkFrame(self, corner_radius=0)
-            self.schedule_send_page.grid(row=0, column=1, rowspan=5, columnspan=2, padx=10, sticky="nsew")
+            self.schedule_send_page.grid(row=0, column=1, rowspan=5, columnspan=2, padx=15, sticky="nsew")
 
-            self.send_page_from_lbl = ctk.CTkLabel(self.schedule_send_page, text="From", width=50, anchor="w").grid(row=0, column=1, sticky='w', padx=(10,0))
-            self.input_from_schedule = ctk.CTkEntry(self.schedule_send_page, placeholder_text="Your email", width=600)
+            self.send_page_from_lbl = ctk.CTkLabel(self.schedule_send_page, text="From", width=50, anchor="w").grid(row=0, column=1, sticky='w', padx=(15,0))
+            self.input_from_schedule = ctk.CTkEntry(self.schedule_send_page, placeholder_text="Your name", width=600)
             self.input_from_schedule.grid(row=0, column=2, pady=10)
 
-            self.send_page_to_lbl = ctk.CTkLabel(self.schedule_send_page, text="To", width=50, anchor='w').grid(row=1, column=1, sticky='w', padx=(10,0))
+            self.send_page_to_lbl = ctk.CTkLabel(self.schedule_send_page, text="To", width=50, anchor='w').grid(row=1, column=1, sticky='w', padx=(15,0))
             self.input_to_schedule = ctk.CTkEntry(self.schedule_send_page, placeholder_text="Recipient email", width=600)
-            self.input_to_schedule.grid(row=1, column=2, pady=(10, 20))
+            self.input_to_schedule.grid(row=1, column=2, pady=(15, 20))
 
-            self.msg_lbl_schedule = ctk.CTkLabel(self.schedule_send_page, text="Message", width=50, anchor="w").grid(row=4, column=1, padx=(10,0), pady=(0,10), sticky='w')
+            self.msg_lbl_schedule = ctk.CTkLabel(self.schedule_send_page, text="Message", width=50, anchor="w").grid(row=2, column=1, padx=(15,0), pady=(0,10), sticky='w')
             self.msg_txt_schedule = ctk.CTkTextbox(self.schedule_send_page, width=710, height=200)
-            self.msg_txt_schedule.grid(row=5, column=1, columnspan=2, sticky='w', padx=(10,0))
+            self.msg_txt_schedule.grid(row=3, column=1, columnspan=2, sticky='w', padx=(15,0))
 
-            self.calendar_schedule = self.createCalendar(self.schedule_send_page, "schedule")
-            self.calendar_schedule.grid(row=2, column=2)
-            self.select_btn = ctk.CTkButton(self.schedule_send_page, text="Select", width=206, command=self.getSelected_Schedule_Date)
-            self.select_btn.grid(row=3, column=2)
+            self.set_schedule_lbl = ctk.CTkLabel(self.schedule_send_page, text="Your email will be send:", width=80, anchor='w').grid(row=4, column=1, sticky='w', padx=(15,0), pady=(30,10), columnspan=2)
+
+            self.schedule_option = ctk.CTkOptionMenu(self.schedule_send_page, values=["Select an option", "After 5 minutes", "After 10 minutes", "After 30 minutes", "After 1 hour", "Aftet 2 hours", "After 3 hours"], width=150, command=self.selectTime)
+            self.schedule_option.grid(row=4, column=1, padx=(200,0), pady=(30,10), columnspan=2, sticky='w')
+
             
-            self.selected_date = ctk.CTkLabel(self.schedule_send_page, text="Scheduled date: ", anchor='w', width=100)
-            self.selected_date.grid(row=2, column=1, sticky='w', padx=(30,0))
-            self.selected_date_input = ctk.CTkEntry(self.schedule_send_page, placeholder_text="mm/dd/yyyy")
-            self.selected_date_input.grid(row=2, column=2, sticky='w')
+
+            # self.calendar_schedule = self.createCalendar(self.schedule_send_page, "schedule")
+            # self.calendar_schedule.grid(row=2, column=2)
+            # self.select_btn = ctk.CTkButton(self.schedule_send_page, text="Select", width=206, command=self.getSelected_Schedule_Date)
+            # self.select_btn.grid(row=3, column=2)
+            
+            # self.selected_date = ctk.CTkLabel(self.schedule_send_page, text="Scheduled date: ", anchor='w', width=100)
+            # self.selected_date.grid(row=2, column=1, sticky='w', padx=(30,0))
+            # self.selected_date_input = ctk.CTkEntry(self.schedule_send_page, placeholder_text="mm/dd/yyyy")
+            # self.selected_date_input.grid(row=2, column=2, sticky='w')
 
             self.schedule_btn = ctk.CTkButton(self.schedule_send_page, text="Schedule", width=80, command=self.scheduleEmail)
-            self.schedule_btn.grid(row=6, column=2, sticky='E', pady=(20,0))
+            self.schedule_btn.grid(row=6, column=1, sticky='w', padx=(15,0), pady=(20,0))
             
         else:
-            self.schedule_send_page.destroy()
+            self.schedule_send_page.grid_forget()
 
     def open_deletePage(self, showPage: bool) -> None:
         if showPage:
@@ -190,19 +202,51 @@ class App(ctk.CTk):
             self.end_date_input.grid(row=3, column=2, padx=(200,0))
 
             self.delete_btn = ctk.CTkButton(self.delete_page, text="Delete", width=80, command=self.deleteEmail)
-            self.delete_btn.grid(row=6, column=2, sticky='E', pady=(30, 0))
+            self.delete_btn.grid(row=6, column=2, sticky='W', pady=(30, 0))
 
         else:
-            self.delete_page.destroy()
+            self.delete_page.grid_forget()
 
     def getInputValues(self) -> None:
         gmail_send_message(self.input_to.get(), self.input_from.get(), self.send_page_msg_txt.get("1.0", "end-1c"))
 
+    def selectTime(self, selected: str) -> None:
+        self.selected_time = selected
+
     def scheduleEmail(self) -> None:
-        print(self.input_from_schedule.get())
-        print(self.input_to_schedule.get())
-        print(self.selected_date_input.get())
-        print(self.msg_txt_schedule.get("1.0", "end-1c"))
+        option_selected = self.selected_time.split(' ')
+        schedule_time = self.calculateScheduleTime(option_selected[2], int(option_selected[1]))
+        #schedule.every(3).seconds.do(self.setSchedule)
+        schedule.every().day.at(schedule_time).do(self.setSchedule)
+
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
+
+    def setSchedule(self) -> schedule.CancelJob:
+        self.sent_email = gmail_send_message(self.input_to_schedule.get(),self.input_from_schedule.get(), self.msg_txt_schedule.get("1.0", "end-1c"))
+
+        return schedule.CancelJob
+
+    def calculateScheduleTime(self, time_selected: str, time_length: int) -> str:
+        current_hour = datetime.now().hour
+        current_minute = datetime.now().minute
+
+        if (time_selected == "minutes"):
+            schedule_hour = current_hour
+            schedule_minute = current_minute + time_length
+
+            if (schedule_minute > 59):
+                schedule_minute = schedule_minute - 60
+                schedule_hour = current_hour + 1
+        else:
+            schedule_hour  = current_hour + time_length
+            schedule_minute = current_minute
+
+            if (schedule_hour > 23):
+                schedule_hour = schedule_hour - 24
+
+        return str(schedule_hour) + ":" + str(schedule_minute)
 
     def deleteEmail(self) -> str:
         endDate_info = self.end_date_input.get().split('/')
