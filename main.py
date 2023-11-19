@@ -6,8 +6,7 @@ import time
 from tkinter import ttk
 from tkcalendar import Calendar
 from datetime import datetime
-from create_emailDraft import gmail_send_message
-from search_gmail import search_emails
+from gmail_methods import gmail_send_message, search_emails, delete_emails
 
 class App(ctk.CTk):
     def __init__(self):
@@ -253,7 +252,9 @@ class App(ctk.CTk):
         endDate_info[1] = str(int(endDate_info[1]) + 1)
         format_endDate = '/'.join(endDate_info)
         query = "after:" + self.start_date_input.get() + " before:" + format_endDate
-        return query
+        print(query)
+        results = search_emails(query)
+        delete_emails(results, self.start_date_input.get(), format_endDate)
 
     def createCalendar(self, pageName: ctk.CTkFrame, type: str) -> Calendar:
         year = datetime.now().year

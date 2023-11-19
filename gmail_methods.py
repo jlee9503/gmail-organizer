@@ -58,7 +58,7 @@ def search_emails(query, labels=None):
             userId='me',
             labelIds=labels,
             q=query,
-            maxResults=500,
+            maxResults=1000,
             includeSpamTrash=False,
             pageToken=next_page_token
         ).execute()
@@ -68,9 +68,13 @@ def search_emails(query, labels=None):
         time.sleep(0.5)
     return email_messages
 
-def delete_emails(email_results):
-  for email_result in email_results:
-    service.users().messages().trash(
-        userId='me',
-        id=email_result['id']
-    ).execute()
+def delete_emails(email_results, startDate: str, endDate: str):
+    print("Total " + str(len(email_results)) + " emails selected")
+    print("Deleting emails from " + startDate + " - " + endDate + "...")
+    for email_result in email_results:
+        service.users().messages().trash(
+            userId='me',
+            id=email_result['id']
+        ).execute()
+
+    print("Process completed")
