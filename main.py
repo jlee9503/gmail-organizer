@@ -201,7 +201,7 @@ class App(ctk.CTk):
             self.end_date_input.grid(row=3, column=2, padx=(200,0))
 
             self.delete_btn = ctk.CTkButton(self.delete_page, text="Delete", width=80, command=self.deleteEmail)
-            self.delete_btn.grid(row=6, column=2, sticky='W', pady=(30, 0))
+            self.delete_btn.grid(row=6, column=1, sticky='W', padx=(30,0), pady=(30, 0))
 
         else:
             self.delete_page.grid_forget()
